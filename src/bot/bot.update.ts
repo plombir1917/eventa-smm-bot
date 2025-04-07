@@ -8,7 +8,7 @@ import {
   Update,
 } from 'nestjs-telegraf';
 import { Telegraf } from 'telegraf';
-import { Message as MessageType } from 'telegraf/typings/core/types/typegram'; // Импортируем тип Message
+import { Message as MessageType } from 'telegraf/typings/core/types/typegram';
 import { actionButtons } from './bot.buttons';
 import { Context } from '../interface/context.interface';
 import { TelegramService } from '../service/telegram.service';
@@ -48,21 +48,31 @@ export class BotUpdate {
 
   @On('text')
   async getMessage(@Message('text') message: string, @Ctx() ctx: Context) {
-    switch (ctx.session.type) {
-      case 'VK':
-        ctx.reply(await this.VKService.publishPost(message));
-        break;
-      case 'TG':
-        ctx.reply(await this.TelegramService.publishPost(message));
-        break;
-      default:
-        return;
+    if (!ctx.session.type) {
+      await ctx.reply('Сначала выберите соцсеть (ВК или ТГ)');
+      return;
+    }
+
+    try {
+      let result;
+      switch (ctx.session.type) {
+        case 'VK':
+          result = await this.VKService.publishPost(message);
+          break;
+        case 'TG':
+          result = await this.TelegramService.publishPost(message);
+          break;
+      }
+      await ctx.reply(result);
+    } catch (error) {
+      await ctx.reply(`Ошибка при отправке сообщения: ${error.message}`);
     }
   }
 
   @On('photo')
   async getPhoto(@Ctx() ctx: Context) {
-    if (ctx.session.type !== 'VK') {
+    if (!ctx.session.type) {
+      await ctx.reply('Сначала выберите соцсеть (ВК или ТГ)');
       return;
     }
 
@@ -73,20 +83,27 @@ export class BotUpdate {
     const photo = message.photo[message.photo.length - 1]; // Берем самое большое изображение
     const fileId = photo.file_id;
 
-    // Получаем ссылку на файл
-    const fileLink = await ctx.telegram.getFileLink(fileId);
-    console.log(fileLink);
-    // Отправляем файл в канал
     try {
-      const result = await this.VKService.publishPost(
-        message.caption,
-        fileLink.href,
-      );
-      await ctx.reply('Фотография успешно отправлена в канал!');
-      console.log(result);
+      let result;
+
+      if (ctx.session.type === 'VK') {
+        // Для ВК получаем прямую ссылку на файл
+        const fileLink = await ctx.telegram.getFileLink(fileId);
+        result = await this.VKService.publishPost(
+          message.caption || '',
+          fileLink.href,
+        );
+      } else if (ctx.session.type === 'TG') {
+        // Для Telegram используем file_id напрямую
+        result = await this.TelegramService.publishPost(
+          message.caption || '',
+          fileId,
+        );
+      }
+
+      await ctx.reply('Фотография успешно отправлена!');
     } catch (error) {
-      await ctx.reply('Ошибка при отправке фотографии: ' + error.message);
-      console.error(error);
+      await ctx.reply(`Ошибка при отправке фотографии: ${error.message}`);
     }
   }
 }

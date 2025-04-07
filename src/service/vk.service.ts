@@ -2,24 +2,140 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class VKService {
-  async publishPost(text: string, photoUrl?: string) {
-    try {
-      const response = await fetch(`${process.env.VK_API_URL}wall.post`, {
-        method: 'POST',
-        body: new URLSearchParams({
-          owner_id: `-${process.env.VK_GROUP_ID}`,
-          from_group: '1',
-          message: text,
-          access_token: process.env.VK_TOKEN,
+  private async getUploadServer() {
+    const userToken = process.env.VK_USER_TOKEN;
+    if (!userToken) {
+      throw new Error(
+        'Токен пользователя ВК не найден. Пожалуйста, получите токен через OAuth.',
+      );
+    }
+
+    const response = await fetch(
+      `${process.env.VK_API_URL}photos.getUploadServer?` +
+        new URLSearchParams({
+          access_token: userToken,
           v: process.env.VK_API_VERSION,
-        }),
+        }).toString(),
+    );
+
+    const data = await response.json();
+    if (data.error) {
+      throw new Error(`Ошибка получения сервера: ${data.error.error_msg}`);
+    }
+
+    return data.response.upload_url;
+  }
+
+  private async uploadPhoto(uploadUrl: string, photoUrl: string) {
+    try {
+      // Скачиваем фото
+      const photoResponse = await fetch(photoUrl);
+      if (!photoResponse.ok) {
+        throw new Error('Не удалось скачать фото');
+      }
+      const buffer = await photoResponse.arrayBuffer();
+
+      // Создаем FormData
+      const formData = new FormData();
+      formData.append(
+        'photo',
+        new Blob([buffer], { type: 'image/jpeg' }),
+        'photo.jpg',
+      );
+
+      // Загружаем на сервер ВК
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData,
       });
 
-      if (!response.ok) {
+      if (!uploadResponse.ok) {
+        throw new Error(`Ошибка загрузки: ${uploadResponse.statusText}`);
+      }
+
+      const uploadResult = await uploadResponse.json();
+      if (!uploadResult.photo) {
         throw new Error(
-          `Ошибка при запросе к Telegram API: ${response.statusText}`,
+          'Ошибка загрузки фото на сервер ВК: нет данных о фото в ответе',
         );
-      } else return '✅ Успешно опубликовано!';
+      }
+
+      return uploadResult;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  private async savePhoto(uploadResponse: any) {
+    try {
+      const userToken = process.env.VK_USER_TOKEN;
+      if (!userToken) {
+        throw new Error('Токен пользователя ВК не найден');
+      }
+
+      const response = await fetch(
+        `${process.env.VK_API_URL}photos.save?` +
+          new URLSearchParams({
+            album_id: '-1',
+            server: String(uploadResponse.server),
+            photos_list: uploadResponse.photos_list,
+            hash: uploadResponse.hash,
+            access_token: userToken,
+            v: process.env.VK_API_VERSION,
+          }).toString(),
+      );
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(`Ошибка сохранения фото: ${data.error.error_msg}`);
+      }
+
+      if (!data.response?.[0]) {
+        throw new Error('Нет данных о сохраненном фото в ответе');
+      }
+
+      return data.response[0];
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async publishPost(text: string, photoUrl?: string) {
+    try {
+      let attachments = '';
+
+      if (photoUrl) {
+        // Получаем URL для загрузки
+        const uploadUrl = await this.getUploadServer();
+
+        // Загружаем фото
+        const uploadResponse = await this.uploadPhoto(uploadUrl, photoUrl);
+
+        // Сохраняем фото
+        const savedPhoto = await this.savePhoto(uploadResponse);
+
+        attachments = `photo${savedPhoto.owner_id}_${savedPhoto.id}`;
+      }
+
+      // Публикуем пост используя токен группы
+      const response = await fetch(
+        `${process.env.VK_API_URL}wall.post?` +
+          new URLSearchParams({
+            owner_id: `-${process.env.VK_GROUP_ID}`,
+            from_group: '1',
+            message: text || '',
+            attachments: attachments,
+            access_token: process.env.VK_TOKEN,
+            v: process.env.VK_API_VERSION,
+          }).toString(),
+      );
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(`Ошибка публикации: ${data.error.error_msg}`);
+      }
+
+      return '✅ Успешно опубликовано!';
     } catch (error) {
       throw new Error(`Ошибка при отправке сообщения: ${error.message}`);
     }
