@@ -1,12 +1,15 @@
 import { Injectable } from '@nestjs/common';
+import { VKAuthService } from './vk-auth.service';
 
 @Injectable()
 export class VKService {
-  private async getUploadServer() {
-    const userToken = process.env.VK_USER_TOKEN;
+  constructor(private readonly vkAuthService: VKAuthService) {}
+
+  private async getUploadServer(userId: number) {
+    const userToken = this.vkAuthService.getUserToken(userId);
     if (!userToken) {
       throw new Error(
-        'Токен пользователя ВК не найден. Пожалуйста, получите токен через OAuth.',
+        'Токен пользователя ВК не найден или истек. Пожалуйста, авторизуйтесь снова.',
       );
     }
 
@@ -66,11 +69,11 @@ export class VKService {
     }
   }
 
-  private async savePhoto(uploadResponse: any) {
+  private async savePhoto(userId: number, uploadResponse: any) {
     try {
-      const userToken = process.env.VK_USER_TOKEN;
+      const userToken = this.vkAuthService.getUserToken(userId);
       if (!userToken) {
-        throw new Error('Токен пользователя ВК не найден');
+        throw new Error('Токен пользователя ВК не найден или истек');
       }
 
       const response = await fetch(
@@ -100,24 +103,29 @@ export class VKService {
     }
   }
 
-  async publishPost(text: string, photoUrl?: string) {
+  async publishPost(userId: number, text: string, photoUrl?: string) {
     try {
       let attachments = '';
 
       if (photoUrl) {
         // Получаем URL для загрузки
-        const uploadUrl = await this.getUploadServer();
+        const uploadUrl = await this.getUploadServer(userId);
 
         // Загружаем фото
         const uploadResponse = await this.uploadPhoto(uploadUrl, photoUrl);
 
         // Сохраняем фото
-        const savedPhoto = await this.savePhoto(uploadResponse);
+        const savedPhoto = await this.savePhoto(userId, uploadResponse);
 
         attachments = `photo${savedPhoto.owner_id}_${savedPhoto.id}`;
       }
 
-      // Публикуем пост используя токен группы
+      const userToken = this.vkAuthService.getUserToken(userId);
+      if (!userToken) {
+        throw new Error('Токен пользователя ВК не найден или истек');
+      }
+
+      // Публикуем пост используя токен пользователя
       const response = await fetch(
         `${process.env.VK_API_URL}wall.post?` +
           new URLSearchParams({
@@ -125,7 +133,7 @@ export class VKService {
             from_group: '1',
             message: text || '',
             attachments: attachments,
-            access_token: process.env.VK_TOKEN,
+            access_token: userToken,
             v: process.env.VK_API_VERSION,
           }).toString(),
       );

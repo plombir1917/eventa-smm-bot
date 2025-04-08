@@ -13,6 +13,7 @@ import { actionButtons } from './bot.buttons';
 import { Context } from '../interface/context.interface';
 import { TelegramService } from '../service/telegram.service';
 import { VKService } from '../service/vk.service';
+import { VKAuthService } from '../service/vk-auth.service';
 
 @Update()
 export class BotUpdate {
@@ -20,6 +21,7 @@ export class BotUpdate {
     @InjectBot() private readonly bot: Telegraf<Context>,
     private readonly TelegramService: TelegramService,
     private readonly VKService: VKService,
+    private readonly VKAuthService: VKAuthService,
   ) {}
 
   @Start()
@@ -32,6 +34,15 @@ export class BotUpdate {
 
   @Hears('ВК')
   async initVKPost(ctx: Context) {
+    if (!ctx.session.vkUserId) {
+      const authUrl = this.VKAuthService.getAuthUrl();
+      await ctx.reply(
+        'Для публикации в ВК нужно авторизоваться. Перейдите по ссылке:',
+      );
+      await ctx.reply(authUrl);
+      return;
+    }
+
     ctx.session.type = 'VK';
     await ctx.reply(
       'Выкладываем пост ВК, окей. А теперь пришли мне контент, который нужно выложить.',
@@ -57,7 +68,11 @@ export class BotUpdate {
       let result;
       switch (ctx.session.type) {
         case 'VK':
-          result = await this.VKService.publishPost(message);
+          if (!ctx.session.vkUserId) {
+            await ctx.reply('Сначала авторизуйтесь в ВК');
+            return;
+          }
+          result = await this.VKService.publishPost(ctx.session.vkUserId, message);
           break;
         case 'TG':
           result = await this.TelegramService.publishPost(message);
@@ -87,9 +102,14 @@ export class BotUpdate {
       let result;
 
       if (ctx.session.type === 'VK') {
+        if (!ctx.session.vkUserId) {
+          await ctx.reply('Сначала авторизуйтесь в ВК');
+          return;
+        }
         // Для ВК получаем прямую ссылку на файл
         const fileLink = await ctx.telegram.getFileLink(fileId);
         result = await this.VKService.publishPost(
+          ctx.session.vkUserId,
           message.caption || '',
           fileLink.href,
         );
