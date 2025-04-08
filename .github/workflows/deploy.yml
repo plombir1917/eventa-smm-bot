@@ -1,8 +1,9 @@
 name: Deploy to VPS
+
 on:
   push:
     branches:
-      - main
+      - main  # или другая ветка
 
 jobs:
   deploy:
@@ -21,7 +22,7 @@ jobs:
           source: "."
           target: "~/app"
 
-      - name: Build and run app with Docker
+      - name: Run Docker Compose on server
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -29,7 +30,5 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd ~/app
-            docker stop nest-app || true
-            docker rm nest-app || true
-            docker build -t nest-app .
-            docker run -d --name nest-app -p 3000:3000 nest-app
+            docker-compose down
+            docker-compose up -d --build
