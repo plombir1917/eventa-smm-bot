@@ -30,9 +30,5 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd ~/app
-            # Удаление существующего контейнера, если он есть
-            docker rm -f nest-app || true
-            # Остановка и удаление текущих контейнеров, определенных в docker-compose.yml
-            docker-compose down
-            # Запуск новых контейнеров
-            docker-compose up -d --build
+            docker compose down
+            docker compose up -d --build
