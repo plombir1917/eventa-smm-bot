@@ -20,7 +20,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: "."
-          target: "~/app"
+          target: "~/eventa-smm-bot"
 
       - name: Create .env file on server
         uses: appleboy/ssh-action@master
@@ -29,7 +29,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            echo "${{ secrets.DOTENV_CONTENT }}" > ~/app/.env
+            echo "${{ secrets.DOTENV_CONTENT }}" > ~/eventa-smm-bot/.env
 
       - name: Run Docker Compose on server
         uses: appleboy/ssh-action@master
@@ -38,6 +38,6 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd ~/app
+            cd ~/eventa-smm-bot
             docker compose down || true
             docker compose up -d --build
