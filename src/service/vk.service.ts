@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { VKAuthService } from './vk-auth.service';
-import { Context } from 'src/interface/context.interface';
+import { Context } from '../interface/context.interface';
 
 @Injectable()
 export class VKService {
