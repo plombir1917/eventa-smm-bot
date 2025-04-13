@@ -9,6 +9,7 @@ export class VKAuthService {
   }
 
   setTokens(authData: VKAuth, ctx: Context) {
+    console.log(ctx);
     ctx.session.vkUserId = authData.user_id;
     ctx.session.vkAccessToken = authData.access_token;
     ctx.session.vkRefreshToken = authData.refresh_token;
