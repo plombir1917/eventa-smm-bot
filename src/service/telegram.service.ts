@@ -37,6 +37,7 @@ export class TelegramService {
 
       return '✅ Успешно опубликовано!';
     } catch (error) {
+      console.log(error);
       throw new Error(`Ошибка при отправке сообщения: ${error.message}`);
     }
   }
