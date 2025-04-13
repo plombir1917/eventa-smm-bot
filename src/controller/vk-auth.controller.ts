@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { VKAuthService } from '../service/vk-auth.service';
-import { VKAuth } from '../interface/vk-auth.interface';
+import { vkAuth } from '../interface/vk-auth.interface';
 import { TelegramService } from '../service/telegram.service';
 import { Ctx } from 'nestjs-telegraf';
 import { Context } from '../interface/context.interface';
@@ -18,7 +18,7 @@ export class VKAuthController {
   }
 
   @Post()
-  async handleTokens(@Body() VKAuthBody: VKAuth, @Ctx() ctx: Context) {
+  async handleTokens(@Body() VKAuthBody: vkAuth, @Ctx() ctx: Context) {
     try {
       console.log('Получены токены:', VKAuthBody);
 

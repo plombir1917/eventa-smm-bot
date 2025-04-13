@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { VKAuth } from '../interface/vk-auth.interface';
+import { vkAuth } from '../interface/vk-auth.interface';
 import { Context } from '../interface/context.interface';
 
 @Injectable()
@@ -8,7 +8,7 @@ export class VKAuthService {
     return 'https://eventa-smm.netlify.app/';
   }
 
-  setTokens(authData: VKAuth, ctx: Context) {
+  setTokens(authData: vkAuth, ctx: Context) {
     ctx.session.vkUserId = authData.user_id;
     ctx.session.vkAccessToken = authData.access_token;
     ctx.session.vkRefreshToken = authData.refresh_token;
