@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { vkAuth } from '../interface/vk-auth.interface';
+import { vkAuth } from '../interface/VK-auth.interface';
 import { Context } from '../interface/context.interface';
 
 @Injectable()
