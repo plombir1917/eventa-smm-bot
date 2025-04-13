@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { VKAuthService } from '../service/vk-auth.service';
-import { vkAuth } from '../interface/VK-auth.interface';
+import { VKAuth } from '../interface/vk-auth.interface';
 import { TelegramService } from '../service/telegram.service';
 import { Ctx } from 'nestjs-telegraf';
 import { Context } from '../interface/context.interface';
@@ -18,7 +18,7 @@ export class VKAuthController {
   }
 
   @Post()
-  async handleTokens(@Body() VKAuthBody: vkAuth, @Ctx() ctx: Context) {
+  async handleTokens(@Body() VKAuthBody: VKAuth, @Ctx() ctx: Context) {
     try {
       console.log('Получены токены:', VKAuthBody);
 
@@ -32,12 +32,13 @@ export class VKAuthController {
           'Токен истек или недействителен. Пожалуйста, авторизуйтесь снова:',
         );
         await ctx.reply(authUrl);
-
-        // Отправляем сообщение в Telegram о успешной авторизации
-        await ctx.reply(
-          `✅ Успешная авторизация!\nТеперь вы можете выкладывать посты в ВК.`,
-        );
+        return;
       }
+
+      // Отправляем сообщение в Telegram о успешной авторизации
+      await ctx.reply(
+        `✅ Успешная авторизация!\nТеперь вы можете выкладывать посты в ВК.`,
+      );
     } catch (error) {
       console.error('Ошибка при обработке токенов:', error);
       return {
