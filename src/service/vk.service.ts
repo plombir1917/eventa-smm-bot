@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { VKAuthService } from './vk-auth.service';
+import { Context } from 'src/interface/context.interface';
 
 @Injectable()
 export class VKService {
   constructor(private readonly vkAuthService: VKAuthService) {}
 
-  private async getUploadServer(userId: number) {
-    const userToken = this.vkAuthService.getUserToken(userId);
+  private async getUploadServer(ctx: Context) {
+    const userToken = ctx.session.vkAccessToken;
     if (!userToken) {
       throw new Error(
         'Токен пользователя ВК не найден или истек. Пожалуйста, авторизуйтесь снова.',
@@ -69,9 +70,9 @@ export class VKService {
     }
   }
 
-  private async savePhoto(userId: number, uploadResponse: any) {
+  private async savePhoto(ctx: Context, uploadResponse: any) {
     try {
-      const userToken = this.vkAuthService.getUserToken(userId);
+      const userToken = ctx.session.vkAccessToken;
       if (!userToken) {
         throw new Error('Токен пользователя ВК не найден или истек');
       }
@@ -103,24 +104,24 @@ export class VKService {
     }
   }
 
-  async publishPost(userId: number, text: string, photoUrl?: string) {
+  async publishPost(ctx: Context, text: string, photoUrl?: string) {
     try {
       let attachments = '';
 
       if (photoUrl) {
         // Получаем URL для загрузки
-        const uploadUrl = await this.getUploadServer(userId);
+        const uploadUrl = await this.getUploadServer(ctx);
 
         // Загружаем фото
         const uploadResponse = await this.uploadPhoto(uploadUrl, photoUrl);
 
         // Сохраняем фото
-        const savedPhoto = await this.savePhoto(userId, uploadResponse);
+        const savedPhoto = await this.savePhoto(ctx, uploadResponse);
 
         attachments = `photo${savedPhoto.owner_id}_${savedPhoto.id}`;
       }
 
-      const userToken = this.vkAuthService.getUserToken(userId);
+      const userToken = ctx.session.vkAccessToken;
       if (!userToken) {
         throw new Error('Токен пользователя ВК не найден или истек');
       }

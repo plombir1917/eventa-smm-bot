@@ -43,6 +43,17 @@ export class BotUpdate {
       return;
     }
 
+    // Проверяем валидность токена
+    const token = ctx.session.vkAccessToken;
+    if (!token) {
+      const authUrl = this.VKAuthService.getAuthUrl();
+      await ctx.reply(
+        'Токен истек или недействителен. Пожалуйста, авторизуйтесь снова:',
+      );
+      await ctx.reply(authUrl);
+      return;
+    }
+
     ctx.session.type = 'VK';
     await ctx.reply(
       'Выкладываем пост ВК, окей. А теперь пришли мне контент, который нужно выложить.',
@@ -72,7 +83,19 @@ export class BotUpdate {
             await ctx.reply('Сначала авторизуйтесь в ВК');
             return;
           }
-          result = await this.VKService.publishPost(ctx.session.vkUserId, message);
+
+          // Проверяем валидность токена
+          const token = ctx.session.vkAccessToken;
+          if (!token) {
+            const authUrl = this.VKAuthService.getAuthUrl();
+            await ctx.reply(
+              'Токен истек или недействителен. Пожалуйста, авторизуйтесь снова:',
+            );
+            await ctx.reply(authUrl);
+            return;
+          }
+
+          result = await this.VKService.publishPost(ctx, message);
           break;
         case 'TG':
           result = await this.TelegramService.publishPost(message);
@@ -106,10 +129,22 @@ export class BotUpdate {
           await ctx.reply('Сначала авторизуйтесь в ВК');
           return;
         }
+
+        // Проверяем валидность токена
+        const token = ctx.session.vkAccessToken;
+        if (!token) {
+          const authUrl = this.VKAuthService.getAuthUrl();
+          await ctx.reply(
+            'Токен истек или недействителен. Пожалуйста, авторизуйтесь снова:',
+          );
+          await ctx.reply(authUrl);
+          return;
+        }
+
         // Для ВК получаем прямую ссылку на файл
         const fileLink = await ctx.telegram.getFileLink(fileId);
         result = await this.VKService.publishPost(
-          ctx.session.vkUserId,
+          ctx,
           message.caption || '',
           fileLink.href,
         );
