@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { VKAuthService } from '../service/vk-auth.service';
-import { VKAuth } from '../interface/vk-auth.interface';
+import { VKAuth } from '../interface/VK-auth.interface';
 import { TelegramService } from '../service/telegram.service';
 import { Ctx } from 'nestjs-telegraf';
 import { Context } from '../interface/context.interface';
