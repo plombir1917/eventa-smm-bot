@@ -40,6 +40,8 @@ export class BotUpdate {
         'Для публикации в ВК нужно авторизоваться. Перейдите по ссылке:',
       );
       await ctx.reply(authUrl);
+      await ctx.reply('После авторизации, пришлите полученный токен');
+      ctx.session.waitingForToken = true;
       return;
     }
 
@@ -51,6 +53,8 @@ export class BotUpdate {
         'Токен истек или недействителен. Пожалуйста, авторизуйтесь снова:',
       );
       await ctx.reply(authUrl);
+      await ctx.reply('После авторизации, пришлите полученный токен');
+      ctx.session.waitingForToken = true;
       return;
     }
 
@@ -70,6 +74,26 @@ export class BotUpdate {
 
   @On('text')
   async getMessage(@Message('text') message: string, @Ctx() ctx: Context) {
+    // Проверяем, ожидаем ли мы токен
+    if (ctx.session.waitingForToken) {
+      try {
+        // Пытаемся обработать токен
+        const authData = JSON.parse(message);
+        console.log(authData);
+        await this.VKAuthService.setTokens(authData, ctx);
+        ctx.session.waitingForToken = false;
+        await ctx.reply(
+          '✅ Токен успешно сохранен! Теперь вы можете выкладывать посты в ВК.',
+        );
+        return;
+      } catch (error) {
+        await ctx.reply(
+          '❌ Неверный формат токена. Пожалуйста, отправьте токен в правильном формате.',
+        );
+        return;
+      }
+    }
+
     if (!ctx.session.type) {
       await ctx.reply('Сначала выберите соцсеть (ВК или ТГ)');
       return;
@@ -92,6 +116,8 @@ export class BotUpdate {
               'Токен истек или недействителен. Пожалуйста, авторизуйтесь снова:',
             );
             await ctx.reply(authUrl);
+            await ctx.reply('После авторизации, пришлите полученный токен');
+            ctx.session.waitingForToken = true;
             return;
           }
 

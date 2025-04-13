@@ -7,5 +7,6 @@ export interface Context extends ContextTelegraf {
     vkRefreshToken?: string;
     vkExpiresIn?: number;
     vkCreatedAt?: number;
+    waitingForToken?: boolean;
   };
 }
